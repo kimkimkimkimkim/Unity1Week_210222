@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GameBase;
+using UniRx;
 
 public class GameSceneManager : SingletonMonoBehaviour<GameSceneManager>
 {
-    // Start is called before the first frame update
     void Start()
     {
-        
+        GameWindowFactory.Create(new GameWindowRequest()).Subscribe();
     }
 }
