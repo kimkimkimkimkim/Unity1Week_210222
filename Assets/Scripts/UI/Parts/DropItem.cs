@@ -1,6 +1,9 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using GameBase;
+using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +14,7 @@ public class DropItem : MonoBehaviour
     [SerializeField] protected Image _dropImage;
     [SerializeField] protected Image _grayOutImage;
     [SerializeField] protected GameObject _grayOutPanel;
+    [SerializeField] protected CanvasGroup _canvasGroup;
 
     private DropIndex index;
 
@@ -41,15 +45,27 @@ public class DropItem : MonoBehaviour
     // 自身からターゲットとなるドロップの選択が可能かどうかを返す
     public bool CanSelect(DropIndex index)
     {
-        // 横方向の判定
-        if (index.column < this.index.column - 1 || this.index.column + 1 < index.column) return false;
+        if(index.column == this.index.column)
+        {
+            // 上下のドロップ
+            if (this.index.row - 1 <= index.row && index.row <= this.index.row + 1) return true;
+        }
+        else if(index.column == this.index.column - 1 || index.column == this.index.column + 1) 
+        {
+            // 左右の列のドロップ
+            var minRowIndex = this.index.column % 2 == 0 ? this.index.row - 1 : this.index.row;
+            var maxRowIndex = this.index.column % 2 == 0 ? this.index.row : this.index.row + 1;
+            if (minRowIndex <= index.row && index.row <= maxRowIndex) return true;
+        }
 
-        // 縦方向の判定
-        var minRowIndex = this.index.column % 2 == 0 ? this.index.row - 1 : this.index.row;
-        var maxRowIndex = this.index.column % 2 == 0 ? this.index.row : this.index.row + 1;
-        if (index.row < minRowIndex || maxRowIndex < index.row) return false;
+        return false;
+    }
 
-        return true;
+    public IObservable<Unit> PlayDeleteAnimationObservable()
+    {
+        var time = 1f;
+
+        return _canvasGroup.DOFade(0.1f, time).OnCompleteAsObservable().Do(_ => Destroy(gameObject)).AsUnitObservable();
     }
 }
 

@@ -21,7 +21,6 @@ public class BoardItem : MonoBehaviour
     private float dropWidth;
 
     private List<List<DropItem>> dropList = new List<List<DropItem>>();
-    private List<List<Vector3>> dropLocalPositionList = new List<List<Vector3>>();
 
     public void Initialize(float boardMargin,float dropSpace,int maxRowNum, int columnNum)
     {
@@ -40,26 +39,11 @@ public class BoardItem : MonoBehaviour
         dropWidth = CalculateDropWidth();
 
         // ドロップの生成
-        dropList.Clear();
-        dropLocalPositionList.Clear();
+        InitializeList();
         for (var c = 0; c < columnNum; c++)
         {
-            dropList.Add(new List<DropItem>());
-            dropLocalPositionList.Add(new List<Vector3>());
-
             var row = GetRowNum(c);
-            for(var r = 0; r < row; r++)
-            {
-                var drop = UIManager.Instance.CreateContent<DropItem>(_boardRT);
-                var position = GetDropPosition(c,r);
-
-                drop.GetComponent<RectTransform>().sizeDelta = new Vector2(dropWidth, dropHeight);
-                drop.transform.localPosition = position;
-                drop.SetInfo(new DropIndex(c,r));
-
-                dropList[c].Add(drop);
-                dropLocalPositionList[c].Add(position);
-            }
+            for(var r = 0; r < row; r++) CreateDrop(new DropIndex(c, r));
         }
     }
 
@@ -129,6 +113,36 @@ public class BoardItem : MonoBehaviour
     {
         return columnIndex % 2 == 0 ? maxRowNum : maxRowNum - 1;
     }
+
+    // 盤面のドロップの個数に応じて要素defaultのリストを作成
+    private void InitializeList()
+    {
+        dropList.Clear();
+
+        for(var c = 0; c < columnNum; c++)
+        {
+            dropList.Add(new List<DropItem>());
+
+            var row = GetRowNum(c);
+            for(var r = 0; r < row; r++)
+            {
+                dropList[c].Add(default(DropItem));
+            }
+        }
+
+    }
+
+    private void CreateDrop(DropIndex index)
+    {
+        var drop = UIManager.Instance.CreateContent<DropItem>(_boardRT);
+        var position = GetDropPosition(index.column, index.row);
+
+        drop.GetComponent<RectTransform>().sizeDelta = new Vector2(dropWidth, dropHeight);
+        drop.transform.localPosition = position;
+        drop.SetInfo(index);
+
+        dropList[index.column][index.row] = drop;
+    }
     #endregion
 
     #region Game
@@ -158,46 +172,79 @@ public class BoardItem : MonoBehaviour
     // ドロップオブジェクトを削除しリスト内の該当のデータをnullにする
     public void DeleteDrop(List<DropItem> selectedDropList)
     {
-        selectedDropList.ForEach(drop =>
+        selectedDropList.ForEach(d =>
         {
-            var index = drop.GetIndex();
-            Destroy(drop);
+            var index = d.GetIndex();
+            var drop = dropList[index.column][index.row];
+
+            Destroy(drop.gameObject);
             dropList[index.column][index.row] = null;
         });
     }
 
+    // 削除したドロップを埋めるように新たにドロップを作成
     public void FillDrop()
     {
+        var dropMoveList = new List<DropMoveInfo>();
+        var deletedDropNumList = new List<int>();
+
         // 詰める
         dropList.ForEach((list, c) =>
         {
             var deletedDropNum = 0;
             list.ForEach((drop, r) =>
             {
-                if(drop != null)
-                {
-                    // 今までの削除されたドロップの個数分下にずらす
-                    var newRowIndex = r - deletedDropNum;
-                    var position = GetDropPosition(c, newRowIndex);
-                    drop.transform.localPosition = position;
-                    drop.RefreshIndex(new DropIndex(c, newRowIndex));
-                }
-                else
+                if(drop == null)
                 {
                     deletedDropNum++;
                 }
+                else if (deletedDropNum != 0)
+                {
+                    // どの位置に移動させるかの情報をリストに追加
+                    dropMoveList.Add(new DropMoveInfo(new DropIndex(c, r), new DropIndex(c, r - deletedDropNum)));
+                }
             });
+            deletedDropNumList.Add(deletedDropNum);
+        });
+        dropMoveList.ForEach(dropMove =>
+        {
+            // ドロップの移動
+            var drop = dropList[dropMove.beforeIndex.column][dropMove.beforeIndex.row];
+            var position = GetDropPosition(dropMove.afterIndex.column, dropMove.afterIndex.row);
+            drop.transform.localPosition = position;
+            drop.RefreshIndex(dropMove.afterIndex);
+            dropList[dropMove.afterIndex.column][dropMove.afterIndex.row] = drop;
+
+            // 元々いた場所をnullにする
+            dropList[dropMove.beforeIndex.column][dropMove.beforeIndex.row] = null;
         });
 
         // 埋める
-        dropList.ForEach((list, c) =>
+        deletedDropNumList.ForEach((n,c) =>
         {
-            var deletedDropNum = 0;
-            list.ForEach((drop, r) =>
+            if (n > 0)
             {
-                if (drop == null) deletedDropNum++;
-            });
+                var rowNum = GetRowNum(c);
+                for (var r = n - 1; r >= 0; r--)
+                {
+                    CreateDrop(new DropIndex(c, rowNum - r - 1));
+                }
+            }
         });
     }
+
+    private struct DropMoveInfo
+    {
+        public DropIndex beforeIndex;
+        public DropIndex afterIndex;
+
+        public DropMoveInfo(DropIndex beforeIndex,DropIndex afterIndex)
+        {
+            this.beforeIndex = beforeIndex;
+            this.afterIndex = afterIndex;
+        }
+    }
+
+
     #endregion
 }
