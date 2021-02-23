@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using GameBase;
 using UniRx;
 using UnityEngine;
@@ -23,21 +24,51 @@ public class GameWindowUIScript : WindowBase
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0))
         {
-            var drop = _board.GetNearestDrop();
-            if(drop != null && !selectedDropList.Contains(drop))
-            {
-                selectedDropList.Add(drop);
-                drop.ShowGrayOutPanel(true);
-            }
+            SelectDrop();
         }
 
         if (Input.GetMouseButtonUp(0))
         {
-            selectedDropList.ForEach(drop => drop.ShowGrayOutPanel(false));
-            selectedDropList.Clear();
+            DeleteDrop();
+            FillDrop();
         }
+    }
+
+    // 必要に応じてドロップの選択状態を更新
+    private void SelectDrop()
+    {
+        var drop = _board.GetNearestDrop();
+        if (drop == null) return;
+
+        if (!selectedDropList.Contains(drop))
+        {
+            // 距離などにより選択不可の場合ははじく
+            if (selectedDropList.Any() && !selectedDropList.Last().CanSelect(drop.GetIndex())) return;
+
+            // 未選択状態のドロップなので選択
+            selectedDropList.Add(drop);
+            drop.ShowGrayOutPanel(true);
+        }
+        else if(selectedDropList.Count >= 2 && drop == selectedDropList[selectedDropList.Count-2])
+        {
+            // 1つ前に選択したドロップなら直近のドロップを非選択状態にする
+            var targetDrop = selectedDropList.LastOrDefault();
+            targetDrop.ShowGrayOutPanel(false);
+            selectedDropList.Remove(targetDrop);
+        }
+    }
+
+    private void DeleteDrop()
+    {
+        _board.DeleteDrop(selectedDropList);
+        selectedDropList.Clear();
+    }
+
+    private void FillDrop()
+    {
+        _board.FillDrop();
     }
 
     public override void Open(WindowInfo info)
