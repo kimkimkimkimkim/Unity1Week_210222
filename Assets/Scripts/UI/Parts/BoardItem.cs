@@ -1,6 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using DG.Tweening;
 using GameBase;
+using UniRx;
 using UnityEngine;
 
 public class BoardItem : MonoBehaviour
@@ -181,6 +185,18 @@ public class BoardItem : MonoBehaviour
             dropList[index.column][index.row] = null;
         });
     }
+
+    public IObservable<Unit> DeleteDropObservable(List<DropItem> selectedDropList) 
+    {
+        var span = 0.1f;
+        return Observable.WhenAll(selectedDropList.Select((drop, index) =>
+        {
+            return Observable.Timer(TimeSpan.FromSeconds(span * index))
+                .Do(_ =>    dropList[drop.GetIndex().column][drop.GetIndex().row] = null)
+                .SelectMany(_ => drop.PlayDeleteAnimationObservable());
+        }));
+    }
+
 
     // 削除したドロップを埋めるように新たにドロップを作成
     public void FillDrop()

@@ -63,9 +63,10 @@ public class DropItem : MonoBehaviour
 
     public IObservable<Unit> PlayDeleteAnimationObservable()
     {
-        var time = 1f;
+        var time = 0.5f;
+        var endAlpha = 0.1f;
 
-        return _canvasGroup.DOFade(0.1f, time).OnCompleteAsObservable().Do(_ => Destroy(gameObject)).AsUnitObservable();
+        return _canvasGroup.DOFade(endAlpha, time).OnCompleteAsObservable().Do(_ => Destroy(gameObject)).AsUnitObservable();
     }
 }
 

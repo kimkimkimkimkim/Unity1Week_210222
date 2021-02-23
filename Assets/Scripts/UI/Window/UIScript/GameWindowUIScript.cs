@@ -15,6 +15,7 @@ public class GameWindowUIScript : WindowBase
 
     [SerializeField] protected BoardItem _board;
 
+    private bool canTap = true;
     private List<DropItem> selectedDropList = new List<DropItem>();
 
     public override void Init(WindowInfo info)
@@ -24,15 +25,18 @@ public class GameWindowUIScript : WindowBase
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0))
+        if (canTap)
         {
-            SelectDrop();
-        }
+            if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0))
+            {
+                SelectDrop();
+            }
 
-        if (Input.GetMouseButtonUp(0))
-        {
-            DeleteDrop();
-            FillDrop();
+            if (Input.GetMouseButtonUp(0))
+            {
+                canTap = false;
+                OnPointerUp();
+            }
         }
     }
 
@@ -60,15 +64,15 @@ public class GameWindowUIScript : WindowBase
         }
     }
 
-    private void DeleteDrop()
-    {
-        _board.DeleteDrop(selectedDropList);
-        selectedDropList.Clear();
-    }
+    private void OnPointerUp() {
+        _board.DeleteDropObservable(selectedDropList)
+            .Do(_ => {
+                _board.FillDrop();
+                canTap = true;
+            })
+            .Subscribe();
 
-    private void FillDrop()
-    {
-        _board.FillDrop();
+        selectedDropList.Clear();
     }
 
     public override void Open(WindowInfo info)

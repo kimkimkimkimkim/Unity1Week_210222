@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8811664760360930580}
   - component: {fileID: 6981458212201680358}
   - component: {fileID: 5873602068886378118}
+  - component: {fileID: 8577048675085560818}
   m_Layer: 5
   m_Name: Parts-DropItem
   m_TagString: drop
@@ -98,6 +99,19 @@ MonoBehaviour:
   _dropImage: {fileID: 6981458212201680358}
   _grayOutImage: {fileID: 8201598328160108802}
   _grayOutPanel: {fileID: 7452815984202197270}
+  _canvasGroup: {fileID: 8577048675085560818}
+--- !u!225 &8577048675085560818
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4174997231075838479}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &7452815984202197270
 GameObject:
   m_ObjectHideFlags: 0
