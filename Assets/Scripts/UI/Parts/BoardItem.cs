@@ -9,6 +9,10 @@ using UnityEngine;
 
 public class BoardItem : MonoBehaviour
 {
+    private const float DROP_FADE_IN_ANIMATION_TIME = 0.2f;
+    private const float DROP_MOVE_ANIMATION_TIME = 0.5f;
+    private const Ease DROP_MOVE_ANIMATION_EASE = Ease.InOutSine;
+
     [SerializeField] RectTransform _boardRT;
 
     private float boardHeight;
@@ -26,7 +30,7 @@ public class BoardItem : MonoBehaviour
 
     private List<List<DropItem>> dropList = new List<List<DropItem>>();
 
-    public void Initialize(float boardMargin,float dropSpace,int maxRowNum, int columnNum)
+    public IObservable<Unit> Initialize(float boardMargin,float dropSpace,int maxRowNum, int columnNum)
     {
         // ボードパラメータの取得・設定
         boardHeight = _boardRT.rect.height;
@@ -44,11 +48,17 @@ public class BoardItem : MonoBehaviour
 
         // ドロップの生成
         InitializeList();
+
+        var observableList = new List<IObservable<Unit>>();
         for (var c = 0; c < columnNum; c++)
         {
             var row = GetRowNum(c);
-            for(var r = 0; r < row; r++) CreateDrop(new DropIndex(c, r));
+            for (var r = 0; r < row; r++) {
+                observableList.Add(CreateDropObservable(new DropIndex(c, GetStartRowIndexWhenCreate(c) + r), new DropIndex(c, r)));
+            }
         }
+
+        return Observable.WhenAll(observableList);
     }
 
     #region Setting
@@ -118,6 +128,13 @@ public class BoardItem : MonoBehaviour
         return columnIndex % 2 == 0 ? maxRowNum : maxRowNum - 1;
     }
 
+    // 新規作成時の最小行インデックス
+    private int GetStartRowIndexWhenCreate(int columnIndex)
+    {
+        var offset = 1;
+        return GetRowNum(columnIndex) + offset;
+    }
+
     // 盤面のドロップの個数に応じて要素defaultのリストを作成
     private void InitializeList()
     {
@@ -134,6 +151,25 @@ public class BoardItem : MonoBehaviour
             }
         }
 
+    }
+
+    private IObservable<Unit> CreateDropObservable(DropIndex beforeIndex,DropIndex afterIndex) {
+        var drop = UIManager.Instance.CreateContent<DropItem>(_boardRT);
+        var beforePosition = GetDropPosition(beforeIndex.column, beforeIndex.row);
+        var afterPosition = GetDropPosition(afterIndex.column, afterIndex.row);
+
+        drop.GetComponent<RectTransform>().sizeDelta = new Vector2(dropWidth, dropHeight);
+        drop.SetInfo(afterIndex);
+        drop.GetCanvasGroup().DOFade(0, 0).OnCompleteAsObservable().Subscribe();
+        drop.transform.localPosition = beforePosition;
+
+        dropList[afterIndex.column][afterIndex.row] = drop;
+
+        return DOTween.Sequence()
+            .Append(drop.GetCanvasGroup().DOFade(1, DROP_FADE_IN_ANIMATION_TIME))
+            .Append(drop.transform.DOLocalMove(afterPosition,DROP_MOVE_ANIMATION_TIME).SetEase(DROP_MOVE_ANIMATION_EASE))
+            .OnCompleteAsObservable()
+            .AsUnitObservable();
     }
 
     private void CreateDrop(DropIndex index)
@@ -174,18 +210,6 @@ public class BoardItem : MonoBehaviour
     }
 
     // ドロップオブジェクトを削除しリスト内の該当のデータをnullにする
-    public void DeleteDrop(List<DropItem> selectedDropList)
-    {
-        selectedDropList.ForEach(d =>
-        {
-            var index = d.GetIndex();
-            var drop = dropList[index.column][index.row];
-
-            Destroy(drop.gameObject);
-            dropList[index.column][index.row] = null;
-        });
-    }
-
     public IObservable<Unit> DeleteDropObservable(List<DropItem> selectedDropList) 
     {
         var span = 0.1f;
@@ -199,7 +223,7 @@ public class BoardItem : MonoBehaviour
 
 
     // 削除したドロップを埋めるように新たにドロップを作成
-    public void FillDrop()
+    public IObservable<Unit> FillDropObservable()
     {
         var dropMoveList = new List<DropMoveInfo>();
         var deletedDropNumList = new List<int>();
@@ -222,18 +246,6 @@ public class BoardItem : MonoBehaviour
             });
             deletedDropNumList.Add(deletedDropNum);
         });
-        dropMoveList.ForEach(dropMove =>
-        {
-            // ドロップの移動
-            var drop = dropList[dropMove.beforeIndex.column][dropMove.beforeIndex.row];
-            var position = GetDropPosition(dropMove.afterIndex.column, dropMove.afterIndex.row);
-            drop.transform.localPosition = position;
-            drop.RefreshIndex(dropMove.afterIndex);
-            dropList[dropMove.afterIndex.column][dropMove.afterIndex.row] = drop;
-
-            // 元々いた場所をnullにする
-            dropList[dropMove.beforeIndex.column][dropMove.beforeIndex.row] = null;
-        });
 
         // 埋める
         deletedDropNumList.ForEach((n,c) =>
@@ -241,12 +253,37 @@ public class BoardItem : MonoBehaviour
             if (n > 0)
             {
                 var rowNum = GetRowNum(c);
-                for (var r = n - 1; r >= 0; r--)
+                for (var r = 0; r < n; r++)
                 {
-                    CreateDrop(new DropIndex(c, rowNum - r - 1));
+                    dropMoveList.Add(new DropMoveInfo(new DropIndex(c, GetStartRowIndexWhenCreate(c) + r), new DropIndex(c, rowNum - n + r)));
                 }
             }
         });
+
+        return Observable.WhenAll(dropMoveList.Select(dropMove =>
+        {
+            if (dropMove.beforeIndex.row >= GetStartRowIndexWhenCreate(dropMove.beforeIndex.column))
+            {
+                // 新規作成
+                return CreateDropObservable(dropMove.beforeIndex, dropMove.afterIndex);
+            }
+            else
+            {
+                // 元々あるドロップの移動
+                var drop = dropList[dropMove.beforeIndex.column][dropMove.beforeIndex.row];
+                var position = GetDropPosition(dropMove.afterIndex.column, dropMove.afterIndex.row);
+                drop.RefreshIndex(dropMove.afterIndex);
+                dropList[dropMove.afterIndex.column][dropMove.afterIndex.row] = drop;
+
+                // 元々いた場所をnullにする
+                dropList[dropMove.beforeIndex.column][dropMove.beforeIndex.row] = null;
+
+                return DOTween.Sequence().SetDelay(DROP_FADE_IN_ANIMATION_TIME)
+                    .Append(drop.transform.DOLocalMove(position, DROP_MOVE_ANIMATION_TIME).SetEase(DROP_MOVE_ANIMATION_EASE))
+                    .OnCompleteAsObservable()
+                    .AsUnitObservable();
+            }
+        }));
     }
 
     private struct DropMoveInfo

@@ -68,6 +68,11 @@ public class DropItem : MonoBehaviour
 
         return _canvasGroup.DOFade(endAlpha, time).OnCompleteAsObservable().Do(_ => Destroy(gameObject)).AsUnitObservable();
     }
+
+    public CanvasGroup GetCanvasGroup()
+    {
+        return _canvasGroup;
+    }
 }
 
 public struct DropIndex

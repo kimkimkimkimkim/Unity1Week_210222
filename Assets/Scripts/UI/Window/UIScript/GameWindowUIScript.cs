@@ -20,7 +20,8 @@ public class GameWindowUIScript : WindowBase
 
     public override void Init(WindowInfo info)
     {
-        _board.Initialize(BOARD_MARGIN,DROP_SPACE,MAX_ROW_NUM,COLUMN_NUM);
+        canTap = false;
+        _board.Initialize(BOARD_MARGIN,DROP_SPACE,MAX_ROW_NUM,COLUMN_NUM).Do(_ => canTap = true).Subscribe();
     }
 
     private void Update()
@@ -66,10 +67,8 @@ public class GameWindowUIScript : WindowBase
 
     private void OnPointerUp() {
         _board.DeleteDropObservable(selectedDropList)
-            .Do(_ => {
-                _board.FillDrop();
-                canTap = true;
-            })
+            .SelectMany(_ => _board.FillDropObservable())
+            .Do(_ => canTap = true)
             .Subscribe();
 
         selectedDropList.Clear();
