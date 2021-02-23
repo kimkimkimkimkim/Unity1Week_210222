@@ -6,7 +6,7 @@ using UniRx;
 
 public class GameSceneManager : SingletonMonoBehaviour<GameSceneManager>
 {
-    void Start()
+    private void Start()
     {
         GameWindowFactory.Create(new GameWindowRequest()).Subscribe();
     }
