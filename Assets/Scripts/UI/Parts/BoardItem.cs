@@ -188,6 +188,7 @@ public class BoardItem : MonoBehaviour
     #region Game
     public DropItem GetNearestDrop()
     {
+        var thresholdDistance = 0.3f;
         var minDistance = float.MaxValue;
         DropItem nearestDrop = null;
 
@@ -205,6 +206,9 @@ public class BoardItem : MonoBehaviour
                 }
             });
         });
+
+        // 一番距離の短いピースが閾値より遠い場合はnullを返す
+        if (minDistance > thresholdDistance) return null;
 
         return nearestDrop;
     }
