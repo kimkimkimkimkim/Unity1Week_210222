@@ -90,12 +90,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _dropSpriteList:
-  - {fileID: 21300000, guid: 23bf1371e7e34435cace3d8bc7d8bd4d, type: 3}
-  - {fileID: 21300000, guid: 6f9567e45a82d4f07803466a58449059, type: 3}
-  - {fileID: 21300000, guid: 95edcafad2c9b4f0bbc15d048e4010d0, type: 3}
-  - {fileID: 21300000, guid: b80279f23ff0e42fe8673b80bfa942b6, type: 3}
-  - {fileID: 21300000, guid: 5d05b3bc692c34ddabb1e063ba45e79e, type: 3}
-  - {fileID: 21300000, guid: a4f743f80b8db486793142fa1b8875bb, type: 3}
+  - {fileID: 21300000, guid: cb2742f55145fe7408cd767f51eafdb4, type: 3}
+  - {fileID: 21300000, guid: d31fff224b1b8cf4ea1fbd0fd17b0d80, type: 3}
   _dropImage: {fileID: 6981458212201680358}
   _grayOutImage: {fileID: 8201598328160108802}
   _grayOutPanel: {fileID: 7452815984202197270}
@@ -110,7 +106,7 @@ CanvasGroup:
   m_Enabled: 1
   m_Alpha: 0
   m_Interactable: 1
-  m_BlocksRaycasts: 1
+  m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
 --- !u!1 &7452815984202197270
 GameObject:

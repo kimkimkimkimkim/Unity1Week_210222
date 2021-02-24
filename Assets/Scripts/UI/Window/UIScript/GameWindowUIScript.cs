@@ -8,8 +8,8 @@ using UnityEngine.UI;
 [ResourcePath("UI/Window/Window-Game")]
 public class GameWindowUIScript : WindowBase
 {
-    private const float BOARD_MARGIN = 10.0f;
-    private const float DROP_SPACE = 10f; // ドロップ間の距離
+    private const float BOARD_MARGIN = 0.0f;
+    private const float DROP_SPACE = 4f; // ドロップ間の距離
     private const int MAX_ROW_NUM = 6;
     private const int COLUMN_NUM = 7;
 
@@ -45,12 +45,12 @@ public class GameWindowUIScript : WindowBase
     private void SelectDrop()
     {
         var drop = _board.GetNearestDrop();
-        if (drop == null) return;
+        if (drop == null || drop.GetDropType() == DropType.Disturb) return;
 
         if (!selectedDropList.Contains(drop))
         {
             // 距離などにより選択不可の場合ははじく
-            if (selectedDropList.Any() && !selectedDropList.Last().CanSelect(drop.GetIndex())) return;
+            if (selectedDropList.Any() && !selectedDropList.Last().CanSelect(drop)) return;
 
             // 未選択状態のドロップなので選択
             selectedDropList.Add(drop);
